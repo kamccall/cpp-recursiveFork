@@ -7,7 +7,7 @@ using namespace std;
 
 void dothing(int &num, int &procs)
 {  
-   bool forked = false;
+   // bool forked = false;
    int child1 = -1;
    int child2 = -1;
    int child3 = -1;
@@ -16,33 +16,80 @@ void dothing(int &num, int &procs)
    int fd1[2], fd2[2], fd3[2];
 
    cout << getpid() << endl;
-   
+
    if (procs == 4)
    {
-      procs = procs / 2;
+      procs = 1;
+      int left, right;
       pipe(fd1);
       child1 = fork();
-      forked = true;
       if (child1 == 0)   // child
       {
          close(fd1[0]);
-         dothing(half2,procs);
-         write(fd1[1], &half2, sizeof(int));
+
+         int half2a = half2 / 2;
+         int half2b = half2 - half2a;
+
+         pipe(fd2);
+         child2 = fork();
+         if (child2 == 0)  // process 4
+         {
+            close(fd2[0]); 
+            dothing(half2b, procs);
+            write(fd2[1], &half2b, sizeof(int));
+            cout << "proc 4: " << half2b << endl;
+            exit(0);
+         }
+         else              // process 3
+         {
+            close(fd2[1]);
+            dothing(half2a, procs);
+            wait(&child2);
+            read(fd2[0], &half2b, sizeof(int));
+            // num = half2a + half2b;
+            right = half2a + half2b;
+            write(fd1[1], &right, sizeof(int));
+            cout << "right: " << right << endl;
+         }
          exit(0);
       }
       else               // parent
       {
          close(fd1[1]);
-         dothing(half1,procs);
-         read(fd1[0], &half2, sizeof(int));
-         num = half1 + half2;
+         
+         int half1a = half1 / 2;
+         int half1b = half1 - half1a;
+
+         pipe(fd3);
+         child3 = fork();
+
+         if (child3 == 0)  // process 2
+         {
+            close(fd3[0]);
+            dothing(half1b, procs);
+            write(fd3[1], &half1b, sizeof(int));
+            cout << "proc 2: " << half1b << endl;
+            exit(0);
+         }
+         else              // process 1
+         {
+            close(fd3[1]);
+            dothing(half1a, procs);
+            wait(&child3);
+            read(fd3[0], &half1b, sizeof(int));
+            left = half1a + half1b;
+            wait(&child1);
+            read(fd1[0], &right, sizeof(int));
+            num = left + right;
+         }
+         // wait(&child1);
       }
    }   
    else if (procs == 2)
    {
-      procs = procs / 2;
+      procs = 1;
       // if there aren't any other forks, do first fork
-      if (!forked)
+      if (true)
       {
          pipe(fd1);
          child1 = fork();
@@ -51,6 +98,7 @@ void dothing(int &num, int &procs)
             close(fd1[0]);
             dothing(half2,procs);
             write(fd1[1], &half2, sizeof(int));
+            cout << "half2 from child: " << half2 << endl;
             exit(0);
          }
          else               // parent
@@ -80,6 +128,7 @@ void dothing(int &num, int &procs)
                close(fd2[0]);
                dothing(half2b, procs);
                write(fd2[1], &half2b, sizeof(int));
+               cout << "half2b grandchild: " << half2b << endl;
                exit(0);
             }
             else              // child (now parent)
@@ -99,6 +148,7 @@ void dothing(int &num, int &procs)
                close(fd3[0]);
                dothing(half1b, procs);
                write(fd3[1], &half1b, sizeof(int));
+               cout << "half1b new child: " << half1b << endl;
                exit(0);
             }
             else            // grandparent
