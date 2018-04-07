@@ -12,19 +12,22 @@ void dothing(int &num, int &procs)
    int half2 = num - half1;  // handled by child
    int fd1[2], fd2[2], fd3[2];
 
+   cout << getpid() << endl;
+
    if (procs > 1)
    {
       procs = procs / 2;
       pipe(fd1);
       child1 = fork();
-      if (child1 == 0)   // child
+      if (child1 == 0)    // child
       {
          close(fd1[0]);
          dothing(half2,procs);
          write(fd1[1], &half2, sizeof(int));
+         cout << "half2: " << half2 << endl;
          exit(0);
       }
-      else               // parent
+      else                // parent
       {
          close(fd1[1]);
          dothing(half1,procs);
@@ -36,7 +39,7 @@ void dothing(int &num, int &procs)
    {
       if (half1 > 1) dothing(half1, procs);
       if (half2 > 1) dothing(half2, procs);
-      num = half1*2 + half2*2;
+      num = half1 + half2;
    }
 
    wait(&child1);
